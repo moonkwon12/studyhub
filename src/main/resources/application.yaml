@@ -21,7 +21,7 @@ spring:
         format_sql: true
         highlight_sql: true
         use_sql_comments: true
-    show-sql: true
+    show-sql: false   # ❗ 끄기
     open-in-view: false
 
 logging:
