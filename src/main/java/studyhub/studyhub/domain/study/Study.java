@@ -1,13 +1,16 @@
 package studyhub.studyhub.domain.study;
 
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "studies")
 @Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Study {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,15 +25,9 @@ public class Study {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    protected Study() {}
-
     public Study(String title, String description) {
         this.title = title;
         this.description = description;
         this.createdAt = LocalDateTime.now();
-    }
-
-    public static Study create(String title, String description) {
-        return new Study(title, description);
     }
 }

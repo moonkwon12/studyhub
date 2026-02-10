@@ -1,24 +1,21 @@
 package studyhub.studyhub.domain.studymember;
 
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import studyhub.studyhub.domain.study.Study;
 import studyhub.studyhub.domain.user.User;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(
-        name="study_member",
-        uniqueConstraints= {
-                @UniqueConstraint(columnNames = {"user_id", "study_id"})
-        }
-)
 @Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class StudyMember {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -31,22 +28,27 @@ public class StudyMember {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private StudyRole role;
+    private Role role;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime joinedAt;
 
-    protected StudyMember() {
-    }
-
-    public StudyMember(User user, Study study, StudyRole role) {
-        this.user = user;
-        this.study = study;
-        this.role = role;
+    @PrePersist
+    void prePersist() {
         this.joinedAt = LocalDateTime.now();
     }
 
-    public static StudyMember create(User user, Study study, StudyRole role){
-        return new StudyMember(user,study,role);
+    public StudyMember(User user, Study study, Role role) {
+        this.user = user;
+        this.study = study;
+        this.role = role;
+    }
+
+    public boolean isLeader() {
+        return this.role == Role.LEADER;
+    }
+
+    public void changeRole(Role role) {
+        this.role = role;
     }
 }

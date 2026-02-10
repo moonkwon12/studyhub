@@ -2,13 +2,16 @@ package studyhub.studyhub.domain.user;
 
 
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
 @Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -26,7 +29,9 @@ public class User {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    protected User() {
+    @PrePersist
+    void prePersist() {
+        this.createdAt = LocalDateTime.now();
     }
 
     public User(String email, String password, String name) {
@@ -35,10 +40,5 @@ public class User {
         this.name = name;
         this.createdAt = LocalDateTime.now();
     }
-
-    public static User create(String email, String password, String name){
-        return new User(email, password, name);
-    }
-
 }
 

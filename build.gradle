@@ -4,48 +4,37 @@ plugins {
 	id 'io.spring.dependency-management' version '1.1.7'
 }
 
-group = 'studyhub'
+group = 'com.example'
 version = '0.0.1-SNAPSHOT'
-description = 'StudyHub API'
+description = 'Demo project for Spring Boot'
 
 java {
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(21)
+		languageVersion = JavaLanguageVersion.of(21) // 또는 21도 가능
 	}
-}
-
-ext {
-	snippetsDir = file("build/generated-snippets")
 }
 
 repositories {
 	mavenCentral()
 }
 
-/* ✅ 이 블록이 핵심 */
-configurations {
-	asciidoctorExtensions
-}
-
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+	// ✅ Swagger (Spring Boot 3 호환)
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
 
 	runtimeOnly 'com.h2database:h2'
 
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 
+	// ✅ 테스트는 이거 하나만
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
-
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-
-	// REST Docs → Asciidoctor 연결용
-	asciidoctorExtensions 'org.springframework.restdocs:spring-restdocs-asciidoctor'
 }
 
-test {
+tasks.named('test') {
 	useJUnitPlatform()
-	outputs.dir snippetsDir
 }

@@ -1,6 +1,6 @@
 package studyhub.studyhub.domain.studymember;
 
-public enum StudyRole {
+public enum Role {
     LEADER,
     MEMBER
 }

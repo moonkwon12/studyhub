@@ -3,7 +3,7 @@ spring:
     name: studyhub
 
   datasource:
-    url: jdbc:h2:mem:studyhub
+    url: jdbc:h2:file:./data/studyhub
     driver-class-name: org.h2.Driver
     username: sa
     password:
@@ -15,13 +15,13 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     properties:
       hibernate:
         format_sql: true
         highlight_sql: true
         use_sql_comments: true
-    show-sql: false   # ❗ 끄기
+    show-sql: false
     open-in-view: false
 
 logging:

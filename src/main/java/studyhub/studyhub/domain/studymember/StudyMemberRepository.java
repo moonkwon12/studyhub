@@ -8,8 +8,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface StudyMemberRepository extends JpaRepository<StudyMember, Long> {
-    Optional<StudyMember> findByUserIdAndStudyId (Long userId, Long studyId);
-
     @Query("""
         select sm
             from StudyMember sm
@@ -18,6 +16,9 @@ public interface StudyMemberRepository extends JpaRepository<StudyMember, Long> 
     """)
     List<StudyMember> findWithUserByStudyId(Long studyId);
 
+    Optional<StudyMember> findByUserIdAndStudyId(Long userId, Long studyId);
 
     List<StudyMember> findByStudyId(Long studyId);
+
+    boolean existsByUserIdAndStudyId(Long userId, Long studyId);
 }

@@ -1,0 +1,3 @@
+2026-02-10 22:18:25.153385+09:00 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "[*]/STUDY_MEMBER"; SQL statement:
+/STUDY_MEMBER [42000-224]
