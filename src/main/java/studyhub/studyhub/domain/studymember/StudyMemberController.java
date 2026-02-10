@@ -39,16 +39,12 @@ public class StudyMemberController {
             @ApiResponse(
                     responseCode = "400",
                     description = "이미 참여한 스터디",
-                    content = @Content(
-                            schema = @Schema(implementation = ErrorResponse.class)
-                    )
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             ),
             @ApiResponse(
                     responseCode = "404",
                     description = "사용자 또는 스터디를 찾을 수 없음",
-                    content = @Content(
-                            schema = @Schema(implementation = ErrorResponse.class)
-                    )
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             )
     })
     @PostMapping
@@ -71,8 +67,20 @@ public class StudyMemberController {
             description = "스터디 멤버가 스터디에서 탈퇴합니다. (리더는 탈퇴 불가)"
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "탈퇴 성공"),
-            @ApiResponse(responseCode = "400", description = "리더는 탈퇴할 수 없음")
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "탈퇴 성공"
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "스터디장은 탈퇴할 수 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "스터디 참여 정보가 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
     })
     @DeleteMapping("/{userId}")
     public ResponseEntity<Void> leaveStudy(
@@ -93,20 +101,24 @@ public class StudyMemberController {
             summary = "스터디 멤버 목록 조회",
             description = "스터디에 참여 중인 모든 멤버를 조회합니다."
     )
-    @ApiResponse(
-            responseCode = "200",
-            description = "조회 성공",
-            content = @Content(
-                    schema = @Schema(implementation = StudyMemberResponse.class)
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = StudyMemberResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "스터디를 찾을 수 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             )
-    )
+    })
     @GetMapping
     public ResponseEntity<List<StudyMemberResponse>> getMembers(
             @Parameter(description = "스터디 ID", example = "1")
             @PathVariable Long studyId
     ) {
-        List<StudyMemberResponse> responses = studyMemberService
-                .findMembers(studyId)
+        List<StudyMemberResponse> responses = studyMemberService.findMembers(studyId)
                 .stream()
                 .map(StudyMemberResponse::new)
                 .toList();
@@ -122,8 +134,20 @@ public class StudyMemberController {
             description = "현재 리더가 다른 멤버에게 리더 권한을 위임합니다."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "리더 위임 성공"),
-            @ApiResponse(responseCode = "403", description = "리더만 위임 가능")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "리더 위임 성공"
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "리더만 권한을 위임할 수 있음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "스터디 멤버 정보를 찾을 수 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
     })
     @PatchMapping("/{userId}/leader")
     public ResponseEntity<Void> changeLeader(

@@ -38,20 +38,4 @@ public class StudyController {
         return ResponseEntity.ok(studyId);
     }
 
-    /**
-     * 스터디 멤버 조회
-     */
-    @Operation(
-            summary = "스터디 멤버 조회",
-            description = "스터디에 참여 중인 멤버 목록을 조회합니다."
-    )
-    @GetMapping("/{studyId}/members")
-    public ResponseEntity<List<StudyMemberResponse>> getStudyMembers(
-            @PathVariable Long studyId
-    ) {
-        List<StudyMemberResponse> responses = studyService.getStudyMemberResponse(studyId);
-
-        return ResponseEntity.ok(responses);
-    }
-
 }
