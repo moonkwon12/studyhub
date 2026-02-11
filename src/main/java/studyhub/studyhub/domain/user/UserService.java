@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import studyhub.studyhub.domain.user.dto.UserCreateRequest;
+import studyhub.studyhub.domain.user.dto.UserCreateResponse;
 import studyhub.studyhub.domain.user.dto.UserResponse;
 import studyhub.studyhub.global.exception.EmailAlreadyExistsException;
 import studyhub.studyhub.global.exception.UserNotFoundException;
@@ -17,18 +18,25 @@ public class UserService {
 
     private final UserRepository userRepository;
 
-    public Long createUser(UserCreateRequest request) {
+    public UserCreateResponse createUser(UserCreateRequest request) {
+
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new EmailAlreadyExistsException();
         }
 
         User user = new User(
                 request.getEmail(),
-                request.getPassword(), // TODO: BCrypt 적용
+                request.getPassword(),
                 request.getName()
         );
 
-        return userRepository.save(user).getId();
+        userRepository.save(user);
+
+        return new UserCreateResponse(
+                user.getId(),
+                user.getName(),
+                user.getEmail()
+        );
     }
 
     @Transactional(readOnly = true)
