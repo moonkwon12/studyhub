@@ -1,16 +1,19 @@
-version: "3.8"
-
 services:
   db:
     image: mysql:8
     container_name: studyhub-mysql
+    command:
+      --innodb-buffer-pool-size=128M
+      --innodb-log-buffer-size=8M
+      --max-connections=50
     environment:
       MYSQL_ROOT_PASSWORD: 1234
-      MYSQL_DATABASE: studyhub   # 🔥 이 줄이 핵심
+      MYSQL_DATABASE: studyhub
     ports:
       - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
+    restart: always
 
   app:
     build: .
@@ -20,6 +23,7 @@ services:
       - "8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: "-Xms256m -Xmx512m"
     depends_on:
       - db
 
