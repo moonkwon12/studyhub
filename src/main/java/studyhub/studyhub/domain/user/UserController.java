@@ -44,6 +44,8 @@ public class UserController {
     public ResponseEntity<UserCreateResponse> createUser(
             @RequestBody @Valid UserCreateRequest request
     ) {
+        System.out.println("AUTO DEPLOY TEST");
+
         UserCreateResponse response = userService.createUser(request);
 
         return ResponseEntity
