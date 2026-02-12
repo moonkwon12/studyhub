@@ -118,12 +118,9 @@ public class StudyMemberController {
             @Parameter(description = "스터디 ID", example = "1")
             @PathVariable Long studyId
     ) {
-        List<StudyMemberResponse> responses = studyMemberService.findMembers(studyId)
-                .stream()
-                .map(StudyMemberResponse::new)
-                .toList();
-
-        return ResponseEntity.ok(responses);
+        return ResponseEntity.ok(
+                studyMemberService.findMembers(studyId)
+        );
     }
 
     // =========================

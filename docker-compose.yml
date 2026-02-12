@@ -5,8 +5,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: 1234
       MYSQL_DATABASE: studyhub
-    ports:
-      - "3306:3306"
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
     volumes:
       - mysql-data:/var/lib/mysql
     restart: always
@@ -14,22 +14,21 @@ services:
   app:
     image: moonkwon/studyhub:latest
     container_name: studyhub-app
-    restart: always
     environment:
       SPRING_PROFILES_ACTIVE: docker
     depends_on:
       - db
+    expose:
+      - "8080"
+    restart: always
 
   nginx:
     image: nginx:latest
     container_name: studyhub-nginx
     ports:
       - "80:80"
-      - "443:443"
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d
-      - /etc/letsencrypt:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
     depends_on:
       - app
     restart: always
@@ -44,4 +43,3 @@ services:
 
 volumes:
   mysql-data:
-

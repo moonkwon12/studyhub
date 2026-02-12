@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import studyhub.studyhub.domain.study.Study;
 import studyhub.studyhub.domain.study.StudyRepository;
+import studyhub.studyhub.domain.studymember.dto.StudyMemberResponse;
 import studyhub.studyhub.domain.user.User;
 import studyhub.studyhub.domain.user.UserRepository;
 import studyhub.studyhub.global.exception.*;
@@ -80,7 +81,13 @@ public class StudyMemberService {
     }
 
     @Transactional(readOnly = true)
-    public List<StudyMember> findMembers(Long studyId) {
-        return studyMemberRepository.findByStudyId(studyId);
+    public List<StudyMemberResponse> findMembers(Long studyId) {
+        List<StudyMember> members =
+                studyMemberRepository.findWithUserByStudyId(studyId);
+
+        return members.stream()
+                .map(StudyMemberResponse::new)
+                .toList();
     }
+
 }
