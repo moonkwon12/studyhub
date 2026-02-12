@@ -61,6 +61,8 @@ public class StudyController {
     public ResponseEntity<StudyCreateResponse> createStudy(
             @Valid @RequestBody StudyCreateRequest request
     ) {
+        System.out.println("공부!");
+
         StudyCreateResponse response = studyService.createStudy(
                 request.getUserId(),
                 request.getTitle(),
