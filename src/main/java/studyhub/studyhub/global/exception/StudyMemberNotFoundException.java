@@ -4,6 +4,6 @@ import org.springframework.http.HttpStatus;
 
 public class StudyMemberNotFoundException extends BusinessException {
     public StudyMemberNotFoundException() {
-        super(HttpStatus.NOT_FOUND, "스터디 참여 정보가 없습니다.");
+        super(HttpStatus.FORBIDDEN, "스터디 멤버가 아닙니다.");
     }
 }

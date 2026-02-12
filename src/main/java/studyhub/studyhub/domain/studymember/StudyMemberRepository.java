@@ -18,6 +18,8 @@ public interface StudyMemberRepository extends JpaRepository<StudyMember, Long> 
 
     Optional<StudyMember> findByUserIdAndStudyId(Long userId, Long studyId);
 
+    Optional<StudyMember> findByStudyIdAndUserId(Long studyId, Long userId);
+
     List<StudyMember> findByStudyId(Long studyId);
 
     boolean existsByUserIdAndStudyId(Long userId, Long studyId);
