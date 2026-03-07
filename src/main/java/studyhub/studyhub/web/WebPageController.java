@@ -23,6 +23,11 @@ public class WebPageController {
         return "main";
     }
 
+    @GetMapping("/friends")
+    public String friends() {
+        return "friend";
+    }
+
     @GetMapping("/studies/{studyId}")
     public String studyDetail(@PathVariable Long studyId, Model model) {
         model.addAttribute("studyId", studyId);

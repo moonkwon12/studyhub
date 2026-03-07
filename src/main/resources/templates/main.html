@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>StudyHub 메인</title>
+    <title>StudyHub Main</title>
     <style>
         body { margin: 0; font-family: "Segoe UI", "Noto Sans KR", sans-serif; background: #f2f6fc; color: #1d2433; }
         .top { background: #fff; border-bottom: 1px solid #dae2ee; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; }
@@ -11,6 +11,8 @@
         .top button { border: 0; background: #1d2433; color: #fff; padding: 7px 10px; border-radius: 8px; cursor: pointer; }
         .wrap { max-width: 980px; margin: 16px auto; padding: 0 12px; }
         h1 { font-size: 22px; margin: 0 0 10px; }
+        .quick-nav { margin: 0 0 12px; }
+        .quick-nav a { display: inline-block; background: #1d2433; color: #fff; padding: 8px 12px; border-radius: 8px; text-decoration: none; font-weight: 600; }
         .create { background: #fff; border: 1px solid #dae2ee; border-radius: 12px; padding: 12px; margin-bottom: 12px; }
         .row { display: grid; grid-template-columns: 120px 1fr; gap: 8px; margin-bottom: 8px; align-items: center; }
         input { width: 100%; box-sizing: border-box; border: 1px solid #dae2ee; border-radius: 8px; padding: 8px; }
@@ -27,23 +29,26 @@
 <body>
 <div class="top">
     <a href="/">StudyHub</a>
-    <button id="logoutBtn">로그아웃</button>
+    <button id="logoutBtn">Logout</button>
 </div>
 <div class="wrap">
-    <h1>내 스터디</h1>
+    <div class="quick-nav">
+        <a href="/friends">Friend Management</a>
+    </div>
+    <h1>My Studies</h1>
     <div class="create">
         <div class="row">
             <label for="title">Title</label>
-            <input id="title" placeholder="JPA 스터디">
+            <input id="title" placeholder="JPA study">
         </div>
         <div class="row">
             <label for="description">Description</label>
-            <input id="description" placeholder="매주 목요일 8시">
+            <input id="description" placeholder="Every Thursday 8 PM">
         </div>
-        <button class="primary" id="createStudyBtn">스터디 생성</button>
+        <button class="primary" id="createStudyBtn">Create Study</button>
     </div>
     <div class="list" id="studyList"></div>
-    <h3>응답 로그</h3>
+    <h3>Response Log</h3>
     <pre id="output"></pre>
 </div>
 <script>
@@ -72,7 +77,7 @@
     function renderStudies(items) {
         const list = document.getElementById("studyList");
         if (!items || items.length === 0) {
-            list.innerHTML = "<div class='card'>참여 중인 스터디가 없습니다.</div>";
+            list.innerHTML = "<div class='card'>No joined studies yet.</div>";
             return;
         }
         list.innerHTML = items.map(s => `
@@ -80,7 +85,7 @@
                 <h3>${s.title}</h3>
                 <div class="meta">Role: ${s.role} / Joined: ${s.joinedAt ?? "-"}</div>
                 <div>${s.description ?? ""}</div>
-                <div style="margin-top:8px;"><a href="/studies/${s.studyId}">스터디 상세 보기</a></div>
+                <div style="margin-top:8px;"><a href="/studies/${s.studyId}">View Study Details</a></div>
             </div>
         `).join("");
     }

@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>StudyHub Friends</title>
+    <style>
+        body { margin: 0; font-family: "Segoe UI", "Noto Sans KR", sans-serif; background: #f2f6fc; color: #1d2433; }
+        .top { background: #fff; border-bottom: 1px solid #dae2ee; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; }
+        .top a { color: #1d2433; text-decoration: none; font-weight: 700; }
+        .top .right { display: flex; gap: 8px; }
+        .top button, .top .link-btn { border: 0; background: #1d2433; color: #fff; padding: 7px 10px; border-radius: 8px; cursor: pointer; text-decoration: none; font-size: 14px; }
+        .wrap { max-width: 1080px; margin: 16px auto; padding: 0 12px 24px; display: grid; gap: 12px; }
+        .card { background: #fff; border: 1px solid #dae2ee; border-radius: 12px; padding: 12px; }
+        h1 { margin: 0 0 8px; font-size: 24px; }
+        h2 { margin: 0 0 10px; font-size: 18px; }
+        .muted { color: #5a6880; font-size: 13px; }
+        .row { display: grid; grid-template-columns: 150px 1fr auto; gap: 8px; align-items: center; }
+        input { width: 100%; box-sizing: border-box; border: 1px solid #dae2ee; border-radius: 8px; padding: 8px; }
+        button.primary { border: 0; background: #0f6dff; color: #fff; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+        button.ghost { border: 1px solid #dae2ee; background: #fff; color: #1d2433; padding: 7px 10px; border-radius: 8px; cursor: pointer; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .item { border: 1px solid #e4ebf4; border-radius: 10px; padding: 10px; margin-bottom: 8px; }
+        .item:last-child { margin-bottom: 0; }
+        .item .name { font-weight: 700; margin-bottom: 4px; }
+        .item .meta { color: #5a6880; font-size: 13px; margin-bottom: 8px; }
+        .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        pre { background: #101826; color: #e8efff; border-radius: 8px; padding: 10px; min-height: 80px; white-space: pre-wrap; word-break: break-word; margin: 0; }
+        @media (max-width: 860px) {
+            .grid { grid-template-columns: 1fr; }
+            .row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="top">
+    <a href="/">StudyHub</a>
+    <div class="right">
+        <a class="link-btn" href="/main">Main</a>
+        <button id="logoutBtn">Logout</button>
+    </div>
+</div>
+
+<div class="wrap">
+    <div class="card">
+        <h1>Friend Management</h1>
+        <div class="muted" id="meLine">Loading profile...</div>
+    </div>
+
+    <div class="card">
+        <h2>Send Friend Request</h2>
+        <div class="row">
+            <label for="receiverId">Receiver User ID</label>
+            <input id="receiverId" type="number" min="1" placeholder="e.g. 2">
+            <button class="primary" id="sendBtn">Send</button>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <h2>Incoming Requests</h2>
+            <div id="incomingList"></div>
+        </div>
+        <div class="card">
+            <h2>Outgoing Requests</h2>
+            <div id="outgoingList"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Friends</h2>
+        <div id="friendsList"></div>
+    </div>
+
+    <div class="card">
+        <h2>Response Log</h2>
+        <pre id="output"></pre>
+    </div>
+</div>
+
+<script>
+    const output = document.getElementById("output");
+
+    function print(title, payload) {
+        output.textContent = `[${new Date().toLocaleString()}] ${title}\n` +
+            (typeof payload === "string" ? payload : JSON.stringify(payload, null, 2));
+    }
+
+    async function api(path, options = {}) {
+        const headers = Object.assign({"Content-Type": "application/json"}, options.headers || {});
+        const res = await fetch(path, Object.assign({}, options, {headers}));
+        const text = await res.text();
+        const body = text ? JSON.parse(text) : null;
+        if (res.status === 401) {
+            window.location.href = "/auth";
+            return null;
+        }
+        if (!res.ok) throw {status: res.status, body};
+        return {status: res.status, body};
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll("\"", "&quot;")
+            .replaceAll("'", "&#39;");
+    }
+
+    function formatDateTime(value) {
+        if (!value) return "-";
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return escapeHtml(value);
+        return d.toLocaleString();
+    }
+
+    function requestCreatedAt(item) {
+        return item.createdAt ?? item.created_at ?? null;
+    }
+
+    function requestRespondedAt(item) {
+        return item.respondedAt ?? item.responded_at ?? null;
+    }
+
+    function renderIncoming(items) {
+        const root = document.getElementById("incomingList");
+        const pending = (items || []).filter(item => item.status === "PENDING");
+        if (pending.length === 0) {
+            root.innerHTML = "<div class='muted'>No incoming pending requests.</div>";
+            return;
+        }
+        root.innerHTML = pending.map(item => `
+            <div class="item">
+                <div class="name">${escapeHtml(item.requesterName)} (#${item.requesterId})</div>
+                <div class="meta">RequestId=${item.requestId} | Status=${item.status}</div>
+                <div class="meta">Requested: ${formatDateTime(requestCreatedAt(item))} | Responded: ${formatDateTime(requestRespondedAt(item))}</div>
+                <div class="actions">
+                    <button class="primary" onclick="acceptRequest(${item.requestId})">Accept</button>
+                    <button class="ghost" onclick="rejectRequest(${item.requestId})">Reject</button>
+                </div>
+            </div>
+        `).join("");
+    }
+
+    function renderOutgoing(items) {
+        const root = document.getElementById("outgoingList");
+        const visible = (items || []).filter(item =>
+            item.status === "PENDING" || item.status === "REJECTED"
+        );
+        if (visible.length === 0) {
+            root.innerHTML = "<div class='muted'>No outgoing pending/rejected requests.</div>";
+            return;
+        }
+        root.innerHTML = visible.map(item => `
+            <div class="item">
+                <div class="name">${escapeHtml(item.receiverName)} (#${item.receiverId})</div>
+                <div class="meta">RequestId=${item.requestId} | Status=${item.status}</div>
+                <div class="meta">Requested: ${formatDateTime(requestCreatedAt(item))} | Responded: ${formatDateTime(requestRespondedAt(item))}</div>
+            </div>
+        `).join("");
+    }
+
+    function renderFriends(items) {
+        const root = document.getElementById("friendsList");
+        if (!items || items.length === 0) {
+            root.innerHTML = "<div class='muted'>No friends yet.</div>";
+            return;
+        }
+        root.innerHTML = items.map(item => `
+            <div class="item">
+                <div class="name">${escapeHtml(item.name)} (#${item.userId})</div>
+                <div class="meta">${escapeHtml(item.email)}</div>
+            </div>
+        `).join("");
+    }
+
+    async function loadMe() {
+        try {
+            const r = await api("/api/auth/me");
+            if (!r) return;
+            document.getElementById("meLine").textContent = `Logged in as userId=${r.body.userId}, email=${r.body.email}`;
+        } catch (e) {
+            print("LOAD ME FAILED", e);
+        }
+    }
+
+    async function refreshAll() {
+        try {
+            const incoming = await api("/api/friends/requests/incoming");
+            if (!incoming) return;
+            renderIncoming(incoming.body);
+
+            const outgoing = await api("/api/friends/requests/outgoing");
+            if (!outgoing) return;
+            renderOutgoing(outgoing.body);
+
+            const friends = await api("/api/friends");
+            if (!friends) return;
+            renderFriends(friends.body);
+        } catch (e) {
+            print("REFRESH FAILED", e);
+        }
+    }
+
+    async function acceptRequest(requestId) {
+        try {
+            const r = await api(`/api/friends/requests/${requestId}/accept`, {method: "PATCH"});
+            if (!r) return;
+            print("ACCEPT REQUEST", r);
+            await refreshAll();
+        } catch (e) {
+            print("ACCEPT FAILED", e);
+        }
+    }
+
+    async function rejectRequest(requestId) {
+        try {
+            const r = await api(`/api/friends/requests/${requestId}/reject`, {method: "PATCH"});
+            if (!r) return;
+            print("REJECT REQUEST", r);
+            await refreshAll();
+        } catch (e) {
+            print("REJECT FAILED", e);
+        }
+    }
+
+    async function sendRequest() {
+        const receiverId = Number(document.getElementById("receiverId").value);
+        if (!Number.isInteger(receiverId) || receiverId <= 0) {
+            print("VALIDATION", "Receiver User ID must be a positive integer.");
+            return;
+        }
+        try {
+            const r = await api("/api/friends/requests", {
+                method: "POST",
+                body: JSON.stringify({receiverId})
+            });
+            if (!r) return;
+            print("SEND REQUEST", r);
+            document.getElementById("receiverId").value = "";
+            await refreshAll();
+        } catch (e) {
+            print("SEND FAILED", e);
+        }
+    }
+
+    document.getElementById("sendBtn").onclick = sendRequest;
+    document.getElementById("logoutBtn").onclick = async () => {
+        try {
+            await fetch("/api/auth/logout", {method: "POST"});
+        } catch (_) {}
+        window.location.href = "/auth";
+    };
+
+    window.acceptRequest = acceptRequest;
+    window.rejectRequest = rejectRequest;
+
+    loadMe();
+    refreshAll();
+</script>
+</body>
+</html>
