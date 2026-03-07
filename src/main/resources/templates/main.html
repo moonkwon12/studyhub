@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>StudyHub 메인</title>
+    <style>
+        body { margin: 0; font-family: "Segoe UI", "Noto Sans KR", sans-serif; background: #f2f6fc; color: #1d2433; }
+        .top { background: #fff; border-bottom: 1px solid #dae2ee; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; }
+        .top a { color: #1d2433; text-decoration: none; font-weight: 700; }
+        .top button { border: 0; background: #1d2433; color: #fff; padding: 7px 10px; border-radius: 8px; cursor: pointer; }
+        .wrap { max-width: 980px; margin: 16px auto; padding: 0 12px; }
+        h1 { font-size: 22px; margin: 0 0 10px; }
+        .create { background: #fff; border: 1px solid #dae2ee; border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+        .row { display: grid; grid-template-columns: 120px 1fr; gap: 8px; margin-bottom: 8px; align-items: center; }
+        input { width: 100%; box-sizing: border-box; border: 1px solid #dae2ee; border-radius: 8px; padding: 8px; }
+        button.primary { border: 0; background: #0f6dff; color: #fff; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+        .list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+        .card { background: #fff; border: 1px solid #dae2ee; border-radius: 12px; padding: 12px; }
+        .card h3 { margin: 0 0 6px; }
+        .meta { color: #5a6880; font-size: 13px; margin-bottom: 8px; }
+        .card a { color: #0f6dff; text-decoration: none; font-weight: 600; }
+        pre { background: #101826; color: #e8efff; border-radius: 8px; padding: 10px; min-height: 100px; white-space: pre-wrap; word-break: break-word; }
+        @media (max-width: 700px) { .row { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="top">
+    <a href="/">StudyHub</a>
+    <button id="logoutBtn">로그아웃</button>
+</div>
+<div class="wrap">
+    <h1>내 스터디</h1>
+    <div class="create">
+        <div class="row">
+            <label for="title">Title</label>
+            <input id="title" placeholder="JPA 스터디">
+        </div>
+        <div class="row">
+            <label for="description">Description</label>
+            <input id="description" placeholder="매주 목요일 8시">
+        </div>
+        <button class="primary" id="createStudyBtn">스터디 생성</button>
+    </div>
+    <div class="list" id="studyList"></div>
+    <h3>응답 로그</h3>
+    <pre id="output"></pre>
+</div>
+<script>
+    const output = document.getElementById("output");
+
+    function print(title, payload) {
+        output.textContent = `[${new Date().toLocaleString()}] ${title}\n` +
+            (typeof payload === "string" ? payload : JSON.stringify(payload, null, 2));
+    }
+
+    async function api(path, options = {}) {
+        const headers = Object.assign({"Content-Type": "application/json"}, options.headers || {});
+
+        const res = await fetch(path, Object.assign({}, options, {headers}));
+        const text = await res.text();
+        const body = text ? JSON.parse(text) : null;
+
+        if (res.status === 401) {
+            window.location.href = "/auth";
+            return;
+        }
+        if (!res.ok) throw {status: res.status, body};
+        return {status: res.status, body};
+    }
+
+    function renderStudies(items) {
+        const list = document.getElementById("studyList");
+        if (!items || items.length === 0) {
+            list.innerHTML = "<div class='card'>참여 중인 스터디가 없습니다.</div>";
+            return;
+        }
+        list.innerHTML = items.map(s => `
+            <div class="card">
+                <h3>${s.title}</h3>
+                <div class="meta">Role: ${s.role} / Joined: ${s.joinedAt ?? "-"}</div>
+                <div>${s.description ?? ""}</div>
+                <div style="margin-top:8px;"><a href="/studies/${s.studyId}">스터디 상세 보기</a></div>
+            </div>
+        `).join("");
+    }
+
+    async function loadMyStudies() {
+        try {
+            const r = await api("/api/studies/mine");
+            renderStudies(r.body);
+            print("LOAD MY STUDIES", r);
+        } catch (e) {
+            print("LOAD FAILED", e);
+        }
+    }
+
+    document.getElementById("createStudyBtn").onclick = async () => {
+        try {
+            const r = await api("/api/studies", {
+                method: "POST",
+                body: JSON.stringify({
+                    title: document.getElementById("title").value.trim(),
+                    description: document.getElementById("description").value.trim()
+                })
+            });
+            print("CREATE STUDY", r);
+            await loadMyStudies();
+        } catch (e) {
+            print("CREATE FAILED", e);
+        }
+    };
+
+    document.getElementById("logoutBtn").onclick = async () => {
+        try {
+            await fetch("/api/auth/logout", {method: "POST"});
+        } catch (_) {}
+        window.location.href = "/auth";
+    };
+
+    loadMyStudies();
+</script>
+</body>
+</html>

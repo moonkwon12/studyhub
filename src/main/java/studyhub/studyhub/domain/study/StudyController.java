@@ -9,62 +9,55 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import studyhub.studyhub.domain.study.dto.StudyCreateRequest;
 import studyhub.studyhub.domain.study.dto.StudyCreateResponse;
-import studyhub.studyhub.domain.studymember.dto.StudyMemberResponse;
+import studyhub.studyhub.domain.study.dto.StudyDetailResponse;
+import studyhub.studyhub.domain.study.dto.StudyMineItemResponse;
 import studyhub.studyhub.global.error.ErrorResponse;
+import studyhub.studyhub.global.security.AuthUserIdResolver;
+import studyhub.studyhub.global.security.JwtUserPrincipal;
 
 import java.net.URI;
 import java.util.List;
 
-@Tag(name = "Study API", description = "스터디 관련 API")
+@Tag(name = "Study API", description = "Study management API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/studies")
 public class StudyController {
 
     private final StudyService studyService;
+    private final AuthUserIdResolver authUserIdResolver;
 
-    @Operation(
-            summary = "스터디 생성",
-            description = "사용자가 새로운 스터디를 생성합니다."
-    )
+    @Operation(summary = "Create study")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "201",
-                    description = "스터디 생성 성공",
+                    description = "Created",
                     content = @Content(schema = @Schema(implementation = StudyCreateResponse.class))
             ),
             @ApiResponse(
                     responseCode = "400",
-                    description = "잘못된 요청 (입력값 검증 실패)",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "사용자를 찾을 수 없음",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
-            ),
-            @ApiResponse(
-                    responseCode = "409",
-                    description = "비즈니스 충돌 (중복 등)",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
-            ),
-            @ApiResponse(
-                    responseCode = "500",
-                    description = "서버 내부 오류",
+                    description = "Invalid input",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             )
     })
     @PostMapping
     public ResponseEntity<StudyCreateResponse> createStudy(
-            @Valid @RequestBody StudyCreateRequest request
+            @Valid @RequestBody StudyCreateRequest request,
+            @AuthenticationPrincipal JwtUserPrincipal principal
     ) {
-        System.out.println("공부!");
+        Long loginUserId = authUserIdResolver.resolve(principal);
 
         StudyCreateResponse response = studyService.createStudy(
-                request.getUserId(),
+                loginUserId,
                 request.getTitle(),
                 request.getDescription()
         );
@@ -72,5 +65,22 @@ public class StudyController {
         return ResponseEntity
                 .created(URI.create("/api/studies/" + response.getStudyId()))
                 .body(response);
+    }
+
+    @Operation(summary = "Get my studies")
+    @GetMapping("/mine")
+    public ResponseEntity<List<StudyMineItemResponse>> getMyStudies(
+            @AuthenticationPrincipal JwtUserPrincipal principal
+    ) {
+        Long loginUserId = authUserIdResolver.resolve(principal);
+        return ResponseEntity.ok(studyService.findMyStudies(loginUserId));
+    }
+
+    @Operation(summary = "Get study detail")
+    @GetMapping("/{studyId}")
+    public ResponseEntity<StudyDetailResponse> getStudyDetail(
+            @PathVariable Long studyId
+    ) {
+        return ResponseEntity.ok(studyService.findStudy(studyId));
     }
 }

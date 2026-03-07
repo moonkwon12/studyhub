@@ -1,6 +1,7 @@
 package studyhub.studyhub.domain.user;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import studyhub.studyhub.domain.user.dto.UserCreateRequest;
@@ -17,6 +18,7 @@ import java.util.List;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public UserCreateResponse createUser(UserCreateRequest request) {
 
@@ -26,7 +28,7 @@ public class UserService {
 
         User user = new User(
                 request.getEmail(),
-                request.getPassword(),
+                passwordEncoder.encode(request.getPassword()),
                 request.getName()
         );
 

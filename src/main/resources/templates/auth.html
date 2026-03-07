@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>StudyHub 인증</title>
+    <style>
+        body { margin: 0; font-family: "Segoe UI", "Noto Sans KR", sans-serif; background: #eff3f9; color: #1d2433; }
+        .wrap { max-width: 820px; margin: 36px auto; padding: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .card { background: #fff; border: 1px solid #d9e1ec; border-radius: 12px; padding: 14px; }
+        h2 { margin: 0 0 12px; font-size: 18px; }
+        .row { margin-bottom: 8px; }
+        input { width: 100%; box-sizing: border-box; border: 1px solid #d9e1ec; border-radius: 8px; padding: 8px; }
+        button { border: 0; background: #0f6dff; color: #fff; border-radius: 8px; padding: 8px 12px; font-weight: 600; cursor: pointer; }
+        .google-btn { display: inline-block; text-decoration: none; background: #fff; color: #1d2433; border: 1px solid #d9e1ec; border-radius: 8px; padding: 8px 12px; font-weight: 600; }
+        pre { background: #101826; color: #e8efff; border-radius: 8px; padding: 10px; min-height: 160px; white-space: pre-wrap; word-break: break-word; }
+        .top { max-width: 820px; margin: 14px auto 0; padding: 0 12px; }
+        a { color: #0f6dff; text-decoration: none; }
+        @media (max-width: 760px) { .wrap { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="top"><a href="/">소개 페이지로</a></div>
+<div class="wrap">
+    <div class="card">
+        <h2>로그인</h2>
+        <div class="row"><input id="loginEmail" placeholder="email"></div>
+        <div class="row"><input id="loginPassword" type="password" placeholder="password"></div>
+        <button id="loginBtn">로그인</button>
+        <div class="row" style="margin-top:10px;">
+            <a class="google-btn" href="/oauth2/authorization/google">Google로 로그인</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>회원가입</h2>
+        <div class="row"><input id="signupEmail" placeholder="email"></div>
+        <div class="row"><input id="signupPassword" type="password" placeholder="password"></div>
+        <div class="row"><input id="signupName" placeholder="name"></div>
+        <button id="signupBtn">회원가입</button>
+    </div>
+
+    <div class="card" style="grid-column: 1 / -1;">
+        <h2>응답</h2>
+        <pre id="output"></pre>
+    </div>
+</div>
+<script>
+    const output = document.getElementById("output");
+
+    function print(title, payload) {
+        output.textContent = `[${new Date().toLocaleString()}] ${title}\n` +
+            (typeof payload === "string" ? payload : JSON.stringify(payload, null, 2));
+    }
+
+    async function callApi(path, options = {}) {
+        const headers = Object.assign({"Content-Type": "application/json"}, options.headers || {});
+        const res = await fetch(path, Object.assign({}, options, {headers}));
+        const text = await res.text();
+        const body = text ? JSON.parse(text) : null;
+        if (!res.ok) throw {status: res.status, body};
+        return {status: res.status, body};
+    }
+
+    document.getElementById("signupBtn").onclick = async () => {
+        try {
+            const r = await callApi("/api/users", {
+                method: "POST",
+                body: JSON.stringify({
+                    email: document.getElementById("signupEmail").value.trim(),
+                    password: document.getElementById("signupPassword").value.trim(),
+                    name: document.getElementById("signupName").value.trim()
+                })
+            });
+            print("SIGNUP SUCCESS", r);
+        } catch (e) {
+            print("SIGNUP FAILED", e);
+        }
+    };
+
+    document.getElementById("loginBtn").onclick = async () => {
+        try {
+            const r = await callApi("/api/auth/login", {
+                method: "POST",
+                body: JSON.stringify({
+                    email: document.getElementById("loginEmail").value.trim(),
+                    password: document.getElementById("loginPassword").value.trim()
+                })
+            });
+            print("LOGIN SUCCESS", r);
+            window.location.href = "/main";
+        } catch (e) {
+            print("LOGIN FAILED", e);
+        }
+    };
+
+    (async () => {
+        try {
+            const r = await fetch("/api/auth/me");
+            if (r.ok) {
+                window.location.href = "/main";
+            }
+        } catch (_) {}
+    })();
+</script>
+</body>
+</html>
+

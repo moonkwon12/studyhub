@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>StudyHub JWT Playground</title>
+    <style>
+        :root {
+            --bg: #f3f6fb;
+            --panel: #ffffff;
+            --text: #1b2430;
+            --muted: #5a6678;
+            --line: #d8e0ea;
+            --accent: #0f6dff;
+        }
+        body {
+            margin: 0;
+            font-family: "Segoe UI", "Noto Sans KR", sans-serif;
+            background: linear-gradient(180deg, #f3f6fb 0%, #e7eef8 100%);
+            color: var(--text);
+        }
+        .wrap {
+            max-width: 980px;
+            margin: 24px auto;
+            padding: 0 12px 24px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 14px;
+        }
+        h1, h2 {
+            margin: 0 0 10px;
+        }
+        h1 { font-size: 22px; }
+        h2 { font-size: 16px; }
+        .row {
+            display: grid;
+            grid-template-columns: 140px 1fr;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        label { color: var(--muted); }
+        input, textarea {
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 8px;
+            font: inherit;
+            background: #fff;
+        }
+        textarea { min-height: 80px; resize: vertical; }
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        button {
+            border: 0;
+            background: var(--accent);
+            color: #fff;
+            border-radius: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        button.secondary { background: #6d7f99; }
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+            background: #0f1724;
+            color: #e6efff;
+            border-radius: 8px;
+            padding: 10px;
+            min-height: 120px;
+            max-height: 360px;
+            overflow: auto;
+        }
+        .token {
+            font-size: 12px;
+            color: var(--muted);
+            word-break: break-all;
+            margin-top: 8px;
+        }
+        @media (max-width: 700px) {
+            .row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="card">
+        <h1>StudyHub JWT Playground</h1>
+        <div class="row">
+            <label for="baseUrl">Base URL</label>
+            <input id="baseUrl" value="">
+        </div>
+        <div class="row">
+            <label for="email">Email</label>
+            <input id="email" placeholder="test@test.com">
+        </div>
+        <div class="row">
+            <label for="password">Password</label>
+            <input id="password" type="password" placeholder="password123">
+        </div>
+        <div class="actions">
+            <button id="loginBtn">로그인 (JWT 발급)</button>
+            <button id="logoutBtn" class="secondary">로그아웃</button>
+        </div>
+        <div class="token" id="tokenView">token: (none)</div>
+    </div>
+
+    <div class="card">
+        <h2>User API</h2>
+        <div class="row">
+            <label for="userEmail">Email</label>
+            <input id="userEmail" placeholder="test@test.com">
+        </div>
+        <div class="row">
+            <label for="userPassword">Password</label>
+            <input id="userPassword" type="password" placeholder="password123">
+        </div>
+        <div class="row">
+            <label for="userName">Name</label>
+            <input id="userName" placeholder="홍길동">
+        </div>
+        <div class="row">
+            <label for="userId">User ID</label>
+            <input id="userId" placeholder="1">
+        </div>
+        <div class="actions">
+            <button id="createUserBtn">POST /api/users</button>
+            <button id="getUserBtn">GET /api/users/{id}</button>
+            <button id="listUsersBtn">GET /api/users</button>
+            <button id="deleteUserBtn">DELETE /api/users/{id}</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>스터디 생성</h2>
+        <div class="row">
+            <label for="studyTitle">Title</label>
+            <input id="studyTitle" placeholder="JPA Study">
+        </div>
+        <div class="row">
+            <label for="studyDesc">Description</label>
+            <input id="studyDesc" placeholder="매주 목요일 진행">
+        </div>
+        <div class="actions">
+            <button id="createStudyBtn">POST /api/studies</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>멤버 API</h2>
+        <div class="row">
+            <label for="memberStudyId">Study ID</label>
+            <input id="memberStudyId" placeholder="1">
+        </div>
+        <div class="row">
+            <label for="newLeaderId">New Leader ID</label>
+            <input id="newLeaderId" placeholder="2">
+        </div>
+        <div class="actions">
+            <button id="joinBtn">POST /members</button>
+            <button id="leaveBtn">DELETE /members/me</button>
+            <button id="listMembersBtn">GET /members</button>
+            <button id="leaderBtn">PATCH /{userId}/leader</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>게시글 API</h2>
+        <div class="row">
+            <label for="postStudyId">Study ID</label>
+            <input id="postStudyId" placeholder="1">
+        </div>
+        <div class="row">
+            <label for="postTitle">Post Title</label>
+            <input id="postTitle" placeholder="이번 주 공지">
+        </div>
+        <div class="row">
+            <label for="postContent">Post Content</label>
+            <textarea id="postContent" placeholder="발표 주제: JWT"></textarea>
+        </div>
+        <div class="row">
+            <label for="postId">Post ID</label>
+            <input id="postId" placeholder="1">
+        </div>
+        <div class="actions">
+            <button id="createPostBtn">POST /posts</button>
+            <button id="listPostsBtn">GET /posts</button>
+            <button id="deletePostBtn">DELETE /posts/{postId}</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>응답</h2>
+        <pre id="output"></pre>
+    </div>
+</div>
+
+<script>
+    const out = document.getElementById("output");
+    const tokenView = document.getElementById("tokenView");
+    const baseUrlInput = document.getElementById("baseUrl");
+    if (!baseUrlInput.value) {
+        baseUrlInput.value = window.location.origin;
+    }
+
+    function getToken() {
+        return localStorage.getItem("studyhub_access_token");
+    }
+
+    function setToken(token) {
+        if (token) {
+            localStorage.setItem("studyhub_access_token", token);
+        } else {
+            localStorage.removeItem("studyhub_access_token");
+        }
+        tokenView.textContent = "token: " + (token ? token : "(none)");
+    }
+
+    function print(title, payload) {
+        out.textContent = `[${new Date().toLocaleString()}] ${title}\n` +
+            (typeof payload === "string" ? payload : JSON.stringify(payload, null, 2));
+    }
+
+    async function api(path, options = {}) {
+        const baseUrl = baseUrlInput.value.trim() || window.location.origin;
+        const token = getToken();
+        const headers = Object.assign({"Content-Type": "application/json"}, options.headers || {});
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+        const res = await fetch(baseUrl + path, Object.assign({}, options, {headers}));
+        const text = await res.text();
+        let body;
+        try { body = text ? JSON.parse(text) : null; } catch (_) { body = text; }
+        if (!res.ok) {
+            throw {status: res.status, body};
+        }
+        return {status: res.status, body};
+    }
+
+    function val(id) {
+        return document.getElementById(id).value.trim();
+    }
+
+    document.getElementById("loginBtn").onclick = async () => {
+        try {
+            const r = await api("/api/auth/login", {
+                method: "POST",
+                body: JSON.stringify({email: val("email"), password: val("password")})
+            });
+            setToken(r.body.accessToken);
+            print("LOGIN SUCCESS", r);
+        } catch (e) {
+            print("LOGIN FAILED", e);
+        }
+    };
+
+    document.getElementById("logoutBtn").onclick = () => {
+        setToken(null);
+        print("LOGOUT", "token removed");
+    };
+
+    document.getElementById("createStudyBtn").onclick = async () => {
+        try {
+            const r = await api("/api/studies", {
+                method: "POST",
+                body: JSON.stringify({title: val("studyTitle"), description: val("studyDesc")})
+            });
+            print("CREATE STUDY", r);
+        } catch (e) {
+            print("CREATE STUDY FAILED", e);
+        }
+    };
+
+    document.getElementById("createUserBtn").onclick = async () => {
+        try {
+            const r = await api("/api/users", {
+                method: "POST",
+                body: JSON.stringify({
+                    email: val("userEmail"),
+                    password: val("userPassword"),
+                    name: val("userName")
+                })
+            });
+            print("CREATE USER", r);
+        } catch (e) {
+            print("CREATE USER FAILED", e);
+        }
+    };
+
+    document.getElementById("getUserBtn").onclick = async () => {
+        try {
+            const id = val("userId");
+            const r = await api(`/api/users/${id}`, {method: "GET"});
+            print("GET USER", r);
+        } catch (e) {
+            print("GET USER FAILED", e);
+        }
+    };
+
+    document.getElementById("listUsersBtn").onclick = async () => {
+        try {
+            const r = await api("/api/users", {method: "GET"});
+            print("LIST USERS", r);
+        } catch (e) {
+            print("LIST USERS FAILED", e);
+        }
+    };
+
+    document.getElementById("deleteUserBtn").onclick = async () => {
+        try {
+            const id = val("userId");
+            const r = await api(`/api/users/${id}`, {method: "DELETE"});
+            print("DELETE USER", r);
+        } catch (e) {
+            print("DELETE USER FAILED", e);
+        }
+    };
+
+    document.getElementById("joinBtn").onclick = async () => {
+        try {
+            const id = val("memberStudyId");
+            const r = await api(`/api/studies/${id}/members`, {method: "POST", body: JSON.stringify({})});
+            print("JOIN STUDY", r);
+        } catch (e) {
+            print("JOIN STUDY FAILED", e);
+        }
+    };
+
+    document.getElementById("leaveBtn").onclick = async () => {
+        try {
+            const id = val("memberStudyId");
+            const r = await api(`/api/studies/${id}/members/me`, {method: "DELETE"});
+            print("LEAVE STUDY", r);
+        } catch (e) {
+            print("LEAVE STUDY FAILED", e);
+        }
+    };
+
+    document.getElementById("listMembersBtn").onclick = async () => {
+        try {
+            const id = val("memberStudyId");
+            const r = await api(`/api/studies/${id}/members`, {method: "GET"});
+            print("LIST MEMBERS", r);
+        } catch (e) {
+            print("LIST MEMBERS FAILED", e);
+        }
+    };
+
+    document.getElementById("leaderBtn").onclick = async () => {
+        try {
+            const id = val("memberStudyId");
+            const userId = val("newLeaderId");
+            const r = await api(`/api/studies/${id}/members/${userId}/leader`, {method: "PATCH", body: JSON.stringify({})});
+            print("CHANGE LEADER", r);
+        } catch (e) {
+            print("CHANGE LEADER FAILED", e);
+        }
+    };
+
+    document.getElementById("createPostBtn").onclick = async () => {
+        try {
+            const id = val("postStudyId");
+            const r = await api(`/api/studies/${id}/posts`, {
+                method: "POST",
+                body: JSON.stringify({title: val("postTitle"), content: val("postContent")})
+            });
+            print("CREATE POST", r);
+        } catch (e) {
+            print("CREATE POST FAILED", e);
+        }
+    };
+
+    document.getElementById("listPostsBtn").onclick = async () => {
+        try {
+            const id = val("postStudyId");
+            const r = await api(`/api/studies/${id}/posts`, {method: "GET"});
+            print("LIST POSTS", r);
+        } catch (e) {
+            print("LIST POSTS FAILED", e);
+        }
+    };
+
+    document.getElementById("deletePostBtn").onclick = async () => {
+        try {
+            const id = val("postStudyId");
+            const postId = val("postId");
+            const r = await api(`/api/studies/${id}/posts/${postId}`, {method: "DELETE"});
+            print("DELETE POST", r);
+        } catch (e) {
+            print("DELETE POST FAILED", e);
+        }
+    };
+
+    setToken(getToken());
+</script>
+</body>
+</html>

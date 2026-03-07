@@ -8,7 +8,7 @@ import studyhub.studyhub.domain.user.User;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "comment",
+@Table(name = "comments",
         indexes = {
                 @Index(name = "idx_comment_post_created", columnList = "post_id, created_at"),
                 @Index(name = "idx_comment_author", columnList = "author_id")

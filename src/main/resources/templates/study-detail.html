@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>StudyHub 스터디 상세</title>
+    <style>
+        body { margin: 0; font-family: "Segoe UI", "Noto Sans KR", sans-serif; background: #f2f6fc; color: #1d2433; }
+        .top { background: #fff; border-bottom: 1px solid #dae2ee; padding: 10px 14px; display: flex; justify-content: space-between; }
+        .top a { text-decoration: none; color: #0f6dff; font-weight: 700; }
+        .top button { border: 0; background: #1d2433; color: #fff; padding: 7px 10px; border-radius: 8px; cursor: pointer; }
+        .wrap { max-width: 980px; margin: 16px auto; padding: 0 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .full { grid-column: 1 / -1; }
+        .card { background: #fff; border: 1px solid #dae2ee; border-radius: 12px; padding: 12px; }
+        h2 { margin: 0 0 10px; font-size: 18px; }
+        ul { margin: 0; padding-left: 18px; }
+        .row { display: grid; grid-template-columns: 90px 1fr; gap: 8px; margin-bottom: 8px; align-items: center; }
+        input, textarea { width: 100%; box-sizing: border-box; border: 1px solid #dae2ee; border-radius: 8px; padding: 8px; }
+        textarea { min-height: 70px; resize: vertical; }
+        button.primary { border: 0; background: #0f6dff; color: #fff; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+        .post { border: 1px solid #e4ebf5; border-radius: 8px; padding: 8px; margin-bottom: 8px; }
+        .meta { color: #5a6880; font-size: 13px; }
+        .comment-box { margin-top: 8px; border-top: 1px solid #e4ebf5; padding-top: 8px; }
+        .comment-item { display: flex; justify-content: space-between; gap: 8px; border: 1px solid #edf2f8; border-radius: 6px; padding: 6px; margin-bottom: 6px; }
+        .comment-meta { color: #5a6880; font-size: 12px; }
+        pre { background: #101826; color: #e8efff; border-radius: 8px; padding: 10px; min-height: 120px; white-space: pre-wrap; word-break: break-word; }
+        @media (max-width: 800px) { .wrap { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="top">
+    <a href="/main">메인으로</a>
+    <button id="logoutBtn">로그아웃</button>
+</div>
+<div class="wrap">
+    <div class="card full">
+        <h2 id="studyTitle">스터디</h2>
+        <div id="studyDesc"></div>
+    </div>
+
+    <div class="card">
+        <h2>멤버 목록</h2>
+        <ul id="memberList"></ul>
+    </div>
+
+    <div class="card">
+        <h2>게시글 작성</h2>
+        <div class="row"><label for="postTitle">제목</label><input id="postTitle"></div>
+        <div class="row"><label for="postContent">내용</label><textarea id="postContent"></textarea></div>
+        <button class="primary" id="createPostBtn">작성</button>
+    </div>
+
+    <div class="card full">
+        <h2>게시글 목록</h2>
+        <div id="postList"></div>
+    </div>
+
+    <div class="card full">
+        <h2>응답 로그</h2>
+        <pre id="output"></pre>
+    </div>
+</div>
+<script th:inline="javascript">
+    const studyId = [[${studyId}]];
+    const output = document.getElementById("output");
+
+    function print(title, payload) {
+        output.textContent = `[${new Date().toLocaleString()}] ${title}\n` +
+            (typeof payload === "string" ? payload : JSON.stringify(payload, null, 2));
+    }
+
+    async function api(path, options = {}) {
+        const headers = Object.assign({"Content-Type": "application/json"}, options.headers || {});
+        const res = await fetch(path, Object.assign({}, options, {headers}));
+        const text = await res.text();
+        let body = null;
+        if (text) {
+            try {
+                body = JSON.parse(text);
+            } catch (_) {
+                body = text;
+            }
+        }
+        if (res.status === 401) {
+            window.location.href = "/auth";
+            return;
+        }
+        if (!res.ok) throw {status: res.status, body};
+        return {status: res.status, body};
+    }
+
+    async function loadStudy() {
+        const r = await api(`/api/studies/${studyId}`);
+        document.getElementById("studyTitle").textContent = r.body.title;
+        document.getElementById("studyDesc").textContent = r.body.description;
+    }
+
+    async function loadMembers() {
+        const r = await api(`/api/studies/${studyId}/members`);
+        const el = document.getElementById("memberList");
+        el.innerHTML = (r.body || []).map(m => `<li>${m.userName} (${m.role})</li>`).join("");
+    }
+
+    async function loadPosts() {
+        const r = await api(`/api/studies/${studyId}/posts`);
+        const el = document.getElementById("postList");
+        const posts = r.body || [];
+        if (posts.length === 0) {
+            el.innerHTML = "<div>게시글이 없습니다.</div>";
+            return;
+        }
+
+        el.innerHTML = posts.map(p => `
+            <div class="post">
+                <div><strong>${p.title}</strong></div>
+                <div class="meta">postId=${p.postId} / author=${p.authorName} / comments=${p.commentCount}</div>
+                <button type="button" data-action="delete-post" data-post-id="${p.postId}">삭제</button>
+                <div class="comment-box">
+                    <div style="display:flex; gap:8px; margin-bottom:8px;">
+                        <input id="comment-input-${p.postId}" placeholder="댓글을 입력하세요">
+                        <button type="button" data-action="create-comment" data-post-id="${p.postId}">댓글 작성</button>
+                    </div>
+                    <div id="comment-list-${p.postId}"></div>
+                </div>
+            </div>
+        `).join("");
+
+        for (const post of posts) {
+            await loadComments(post.postId);
+        }
+    }
+
+    async function loadComments(postId) {
+        const r = await api(`/api/studies/${studyId}/posts/${postId}/comments`);
+        const comments = r.body || [];
+        const el = document.getElementById(`comment-list-${postId}`);
+        if (!el) return;
+        if (comments.length === 0) {
+            el.innerHTML = "<div class='comment-meta'>댓글이 없습니다.</div>";
+            return;
+        }
+
+        el.innerHTML = comments.map(c => `
+            <div class="comment-item">
+                <div>
+                    <div>${c.content}</div>
+                    <div class="comment-meta">#${c.commentId} ${c.authorName} / ${c.createdAt ?? "-"}</div>
+                </div>
+                <div>
+                    <button type="button" data-action="delete-comment" data-post-id="${postId}" data-comment-id="${c.commentId}">삭제</button>
+                </div>
+            </div>
+        `).join("");
+    }
+
+    async function createComment(postId) {
+        try {
+            const input = document.getElementById(`comment-input-${postId}`);
+            const content = input.value.trim();
+            if (!content) return;
+
+            const r = await api(`/api/studies/${studyId}/posts/${postId}/comments`, {
+                method: "POST",
+                body: JSON.stringify({content})
+            });
+            input.value = "";
+            print("CREATE COMMENT", r);
+            await loadPosts();
+        } catch (e) {
+            print("CREATE COMMENT FAILED", e);
+        }
+    }
+
+    async function deleteComment(postId, commentId) {
+        try {
+            const r = await api(`/api/studies/${studyId}/posts/${postId}/comments/${commentId}`, {
+                method: "DELETE"
+            });
+            print("DELETE COMMENT", r);
+            await loadPosts();
+        } catch (e) {
+            print("DELETE COMMENT FAILED", e);
+        }
+    }
+
+    async function deletePost(postId) {
+        try {
+            const r = await api(`/api/studies/${studyId}/posts/${postId}`, {method: "DELETE"});
+            print("DELETE POST", r);
+            await loadPosts();
+        } catch (e) {
+            print("DELETE POST FAILED", e);
+        }
+    }
+
+    document.getElementById("postList").addEventListener("click", async (event) => {
+        const button = event.target.closest("button[data-action]");
+        if (!button) return;
+
+        const action = button.dataset.action;
+        const postId = Number(button.dataset.postId);
+
+        if (action === "create-comment") {
+            await createComment(postId);
+            return;
+        }
+        if (action === "delete-comment") {
+            const commentId = Number(button.dataset.commentId);
+            await deleteComment(postId, commentId);
+            return;
+        }
+        if (action === "delete-post") {
+            await deletePost(postId);
+        }
+    });
+
+    document.getElementById("createPostBtn").onclick = async () => {
+        try {
+            const r = await api(`/api/studies/${studyId}/posts`, {
+                method: "POST",
+                body: JSON.stringify({
+                    title: document.getElementById("postTitle").value.trim(),
+                    content: document.getElementById("postContent").value.trim()
+                })
+            });
+            print("CREATE POST", r);
+            await loadPosts();
+        } catch (e) {
+            print("CREATE POST FAILED", e);
+        }
+    };
+
+    document.getElementById("logoutBtn").onclick = async () => {
+        try {
+            await fetch("/api/auth/logout", {method: "POST"});
+        } catch (_) {}
+        window.location.href = "/auth";
+    };
+
+    (async () => {
+        try {
+            await loadStudy();
+            await loadMembers();
+            await loadPosts();
+            print("LOAD DETAIL", "ok");
+        } catch (e) {
+            print("LOAD DETAIL FAILED", e);
+        }
+    })();
+</script>
+</body>
+</html>
