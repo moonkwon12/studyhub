@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.*;
 import studyhub.studyhub.domain.comment.dto.CommentCreateRequest;
 import studyhub.studyhub.domain.comment.dto.CommentCreateResponse;
 import studyhub.studyhub.domain.comment.dto.CommentListItem;
+import studyhub.studyhub.domain.comment.dto.CommentUpdateRequest;
+import studyhub.studyhub.domain.comment.dto.CommentUpdateResponse;
 import studyhub.studyhub.global.error.ErrorResponse;
 import studyhub.studyhub.global.security.AuthUserIdResolver;
 import studyhub.studyhub.global.security.JwtUserPrincipal;
@@ -115,5 +117,38 @@ public class CommentController {
         Long loginUserId = authUserIdResolver.resolve(principal);
         commentService.deleteComment(studyId, postId, commentId, loginUserId);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "댓글 수정 (작성자 본인만 가능)")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "댓글 수정 성공",
+                    content = @Content(schema = @Schema(implementation = CommentUpdateResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "수정 권한 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "댓글 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    @PatchMapping("/{commentId}")
+    public ResponseEntity<CommentUpdateResponse> update(
+            @Parameter(description = "스터디 ID", example = "1")
+            @PathVariable Long studyId,
+            @Parameter(description = "게시글 ID", example = "10")
+            @PathVariable Long postId,
+            @Parameter(description = "댓글 ID", example = "100")
+            @PathVariable Long commentId,
+            @AuthenticationPrincipal JwtUserPrincipal principal,
+            @Valid @RequestBody CommentUpdateRequest request
+    ) {
+        Long loginUserId = authUserIdResolver.resolve(principal);
+        return ResponseEntity.ok(commentService.updateComment(studyId, postId, commentId, loginUserId, request));
     }
 }

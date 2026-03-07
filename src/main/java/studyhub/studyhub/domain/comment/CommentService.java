@@ -6,6 +6,8 @@ import org.springframework.transaction.annotation.Transactional;
 import studyhub.studyhub.domain.comment.dto.CommentCreateRequest;
 import studyhub.studyhub.domain.comment.dto.CommentCreateResponse;
 import studyhub.studyhub.domain.comment.dto.CommentListItem;
+import studyhub.studyhub.domain.comment.dto.CommentUpdateRequest;
+import studyhub.studyhub.domain.comment.dto.CommentUpdateResponse;
 import studyhub.studyhub.domain.post.StudyPost;
 import studyhub.studyhub.domain.post.StudyPostRepository;
 import studyhub.studyhub.domain.studymember.StudyMemberRepository;
@@ -48,10 +50,26 @@ public class CommentService {
                 .orElseThrow(PostNotFoundException::new);
         validatePostInStudy(post, studyId);
 
-        studyMemberRepository.findByStudyIdAndUserId(studyId, loginUserId)
+        var member = studyMemberRepository.findByStudyIdAndUserId(studyId, loginUserId)
                 .orElseThrow(StudyMemberNotFoundException::new);
+        boolean isLeader = member.getRole().name().equals("LEADER");
 
-        return commentRepository.findListByPostId(postId);
+        return commentRepository.findWithAuthorByPostId(postId)
+                .stream()
+                .map(c -> {
+                    boolean mine = c.getAuthor().getId().equals(loginUserId);
+                    return new CommentListItem(
+                            c.getId(),
+                            c.getAuthor().getId(),
+                            c.getAuthor().getName(),
+                            c.getContent(),
+                            c.getCreatedAt(),
+                            mine,
+                            mine,
+                            mine || isLeader
+                    );
+                })
+                .toList();
     }
 
     @Transactional
@@ -75,10 +93,30 @@ public class CommentService {
         commentRepository.delete(comment);
     }
 
+    @Transactional
+    public CommentUpdateResponse updateComment(Long studyId, Long postId, Long commentId, Long loginUserId, CommentUpdateRequest request) {
+        Comment comment = commentRepository.findDetailForAuth(commentId)
+                .orElseThrow(CommentNotFoundException::new);
+
+        if (!comment.getPost().getId().equals(postId) || !comment.getPost().getStudy().getId().equals(studyId)) {
+            throw new CommentNotFoundException();
+        }
+
+        // Must be a study member and the comment author.
+        studyMemberRepository.findByStudyIdAndUserId(studyId, loginUserId)
+                .orElseThrow(StudyMemberNotFoundException::new);
+
+        if (!comment.getAuthor().getId().equals(loginUserId)) {
+            throw new CommentPermissionDeniedException();
+        }
+
+        comment.updateContent(request.content());
+        return new CommentUpdateResponse(comment.getId(), comment.getContent(), comment.getCreatedAt());
+    }
+
     private void validatePostInStudy(StudyPost post, Long studyId) {
         if (!post.getStudy().getId().equals(studyId)) {
             throw new PostNotFoundException();
         }
     }
 }
-
