@@ -25,6 +25,7 @@
         .item .name { font-weight: 700; margin-bottom: 4px; }
         .item .meta { color: #5a6880; font-size: 13px; margin-bottom: 8px; }
         .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .action-link { display: inline-block; border: 1px solid #dae2ee; background: #fff; color: #1d2433; padding: 7px 10px; border-radius: 8px; text-decoration: none; font-size: 14px; }
         pre { background: #101826; color: #e8efff; border-radius: 8px; padding: 10px; min-height: 80px; white-space: pre-wrap; word-break: break-word; margin: 0; }
         @media (max-width: 860px) {
             .grid { grid-template-columns: 1fr; }
@@ -167,10 +168,14 @@
             root.innerHTML = "<div class='muted'>No friends yet.</div>";
             return;
         }
+        // 친구 목록에서 바로 1:1 채팅 화면으로 넘어갈 수 있게 한다.
         root.innerHTML = items.map(item => `
             <div class="item">
                 <div class="name">${escapeHtml(item.name)} (#${item.userId})</div>
                 <div class="meta">${escapeHtml(item.email)}</div>
+                <div class="actions">
+                    <a class="action-link" href="/chats?friendId=${item.userId}">Open Chat</a>
+                </div>
             </div>
         `).join("");
     }

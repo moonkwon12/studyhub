@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface FriendRequestRepository extends JpaRepository<FriendRequest, Long> {
 
@@ -49,5 +50,25 @@ public interface FriendRequestRepository extends JpaRepository<FriendRequest, Lo
         order by fr.respondedAt desc
     """)
     List<FriendRequest> findAcceptedByUserId(@Param("userId") Long userId);
+
+    // 두 사용자 사이에 수락된 친구 관계가 있는지 채팅 허용 여부 판단에 사용한다.
+    @Query("""
+        select fr
+        from FriendRequest fr
+        join fetch fr.requester rq
+        join fetch fr.receiver rc
+        where fr.status = studyhub.studyhub.domain.friend.FriendRequestStatus.ACCEPTED
+          and ((rq.id = :userA and rc.id = :userB) or (rq.id = :userB and rc.id = :userA))
+        order by fr.respondedAt desc
+    """)
+    List<FriendRequest> findAcceptedBetweenUsersAll(@Param("userA") Long userA, @Param("userB") Long userB);
+
+    default Optional<FriendRequest> findAcceptedBetweenUsers(Long userA, Long userB) {
+        List<FriendRequest> result = findAcceptedBetweenUsersAll(userA, userB);
+        if (result.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(result.getFirst());
+    }
 }
 

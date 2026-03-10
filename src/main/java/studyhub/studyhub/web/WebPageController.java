@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.ui.Model;
 
 @Controller
+// 서버 렌더링 템플릿 진입 경로를 제공한다.
 public class WebPageController {
 
     @GetMapping("/")
@@ -26,6 +27,11 @@ public class WebPageController {
     @GetMapping("/friends")
     public String friends() {
         return "friend";
+    }
+
+    @GetMapping("/chats")
+    public String chats() {
+        return "chat";
     }
 
     @GetMapping("/studies/{studyId}")

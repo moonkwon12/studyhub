@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>StudyHub Chat</title>
+    <style>
+        body { margin: 0; font-family: "Segoe UI", "Noto Sans KR", sans-serif; background: #eef4fb; color: #172033; }
+        .top { background: #fff; border-bottom: 1px solid #d7e1ef; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; }
+        .top a { color: #172033; text-decoration: none; font-weight: 700; }
+        .top .right { display: flex; gap: 8px; }
+        .top button, .top .link-btn { border: 0; background: #172033; color: #fff; padding: 8px 11px; border-radius: 8px; cursor: pointer; text-decoration: none; font-size: 14px; }
+        .layout { max-width: 1180px; margin: 16px auto; padding: 0 12px 24px; display: grid; grid-template-columns: 320px 1fr; gap: 12px; }
+        .panel { background: #fff; border: 1px solid #d7e1ef; border-radius: 14px; overflow: hidden; }
+        .panel-head { padding: 14px; border-bottom: 1px solid #e5ecf5; }
+        .panel-head h1, .panel-head h2 { margin: 0; font-size: 20px; }
+        .panel-head .muted { color: #64748b; font-size: 13px; margin-top: 4px; }
+        .room-list { max-height: 70vh; overflow: auto; }
+        .room-item { padding: 12px 14px; border-bottom: 1px solid #eef2f8; cursor: pointer; }
+        .room-item.active { background: #f0f6ff; }
+        .room-item .name { font-weight: 700; }
+        .room-item .meta { color: #64748b; font-size: 13px; margin-top: 4px; }
+        .chat-shell { display: grid; grid-template-rows: auto 1fr auto; min-height: 70vh; }
+        .chat-head { padding: 14px; border-bottom: 1px solid #e5ecf5; }
+        .chat-head .title { font-weight: 700; }
+        .chat-body { padding: 14px; overflow: auto; background: linear-gradient(180deg, #fbfdff 0%, #f2f7fd 100%); }
+        .empty { color: #64748b; font-size: 14px; }
+        .message { max-width: 72%; padding: 10px 12px; border-radius: 14px; margin-bottom: 10px; line-height: 1.4; }
+        .message.mine { margin-left: auto; background: #0f6dff; color: #fff; border-bottom-right-radius: 4px; }
+        .message.theirs { background: #fff; border: 1px solid #dbe6f3; border-bottom-left-radius: 4px; }
+        .message .meta { font-size: 12px; opacity: .8; margin-top: 4px; }
+        .composer { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 14px; border-top: 1px solid #e5ecf5; background: #fff; }
+        textarea { resize: none; min-height: 72px; border: 1px solid #d7e1ef; border-radius: 12px; padding: 10px; font: inherit; }
+        button.primary { border: 0; background: #0f6dff; color: #fff; padding: 0 16px; border-radius: 12px; cursor: pointer; font-weight: 700; }
+        pre { margin: 0; padding: 12px 14px; background: #0f172a; color: #dbeafe; white-space: pre-wrap; word-break: break-word; min-height: 80px; }
+        @media (max-width: 900px) {
+            .layout { grid-template-columns: 1fr; }
+            .room-list { max-height: 240px; }
+            .chat-shell { min-height: auto; }
+        }
+    </style>
+</head>
+<body>
+<div class="top">
+    <a href="/">StudyHub</a>
+    <div class="right">
+        <a class="link-btn" href="/main">Main</a>
+        <a class="link-btn" href="/friends">Friends</a>
+        <button id="logoutBtn">Logout</button>
+    </div>
+</div>
+
+<div class="layout">
+    <section class="panel">
+        <div class="panel-head">
+            <h1>Chats</h1>
+            <div class="muted" id="meLine">Loading profile...</div>
+        </div>
+        <div class="room-list" id="roomList"></div>
+    </section>
+
+    <section class="panel chat-shell">
+        <div class="chat-head">
+            <div class="title" id="roomTitle">Select a chat room</div>
+            <div class="muted" id="roomMeta">Friend-only direct chats</div>
+        </div>
+        <div class="chat-body" id="chatBody">
+            <div class="empty">친구 목록에서 채팅을 시작하거나 기존 채팅방을 선택하세요.</div>
+        </div>
+        <div class="composer">
+            <textarea id="messageInput" placeholder="Type your message" disabled></textarea>
+            <button class="primary" id="sendBtn" disabled>Send</button>
+        </div>
+        <pre id="output"></pre>
+    </section>
+</div>
+
+<script>
+    // WebSocket 없이도 동작하도록 REST + polling 기반으로 채팅 화면을 구성한다.
+    const output = document.getElementById("output");
+    const roomList = document.getElementById("roomList");
+    const chatBody = document.getElementById("chatBody");
+    const roomTitle = document.getElementById("roomTitle");
+    const roomMeta = document.getElementById("roomMeta");
+    const messageInput = document.getElementById("messageInput");
+    const sendBtn = document.getElementById("sendBtn");
+
+    let me = null;
+    let activeRoomId = null;
+    let refreshTimer = null;
+    let roomsState = [];
+
+    function print(title, payload) {
+        output.textContent = `[${new Date().toLocaleString()}] ${title}\n` +
+            (typeof payload === "string" ? payload : JSON.stringify(payload, null, 2));
+    }
+
+    async function api(path, options = {}) {
+        const headers = Object.assign({"Content-Type": "application/json"}, options.headers || {});
+        const res = await fetch(path, Object.assign({}, options, {headers}));
+        const text = await res.text();
+        const body = text ? JSON.parse(text) : null;
+        if (res.status === 401) {
+            window.location.href = "/auth";
+            return null;
+        }
+        if (!res.ok) throw {status: res.status, body};
+        return {status: res.status, body};
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll("\"", "&quot;")
+            .replaceAll("'", "&#39;");
+    }
+
+    function formatDateTime(value) {
+        if (!value) return "-";
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return escapeHtml(value);
+        return d.toLocaleString();
+    }
+
+    function setComposerEnabled(enabled) {
+        messageInput.disabled = !enabled;
+        sendBtn.disabled = !enabled;
+    }
+
+    function renderRooms(rooms) {
+        roomsState = rooms || [];
+        if (!rooms || rooms.length === 0) {
+            roomList.innerHTML = "<div class='room-item'><div class='meta'>No chat rooms yet.</div></div>";
+            return;
+        }
+        roomList.innerHTML = rooms.map(room => `
+            <div class="room-item ${room.roomId === activeRoomId ? "active" : ""}" onclick="selectRoom(${room.roomId})">
+                <div class="name">${escapeHtml(room.friendName)}</div>
+                <div class="meta">${escapeHtml(room.lastMessage ?? "No messages yet")}</div>
+                <div class="meta">${formatDateTime(room.lastMessageAt ?? room.createdAt)}</div>
+            </div>
+        `).join("");
+    }
+
+    function renderMessages(messages) {
+        if (!messages || messages.length === 0) {
+            chatBody.innerHTML = "<div class='empty'>아직 메시지가 없습니다. 첫 메시지를 보내세요.</div>";
+            return;
+        }
+        chatBody.innerHTML = messages.map(message => `
+            <div class="message ${message.senderId === me.userId ? "mine" : "theirs"}">
+                <div>${escapeHtml(message.content)}</div>
+                <div class="meta">${escapeHtml(message.senderName)} · ${formatDateTime(message.createdAt)}</div>
+            </div>
+        `).join("");
+        chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    async function loadMe() {
+        const r = await api("/api/auth/me");
+        if (!r) return;
+        me = r.body;
+        document.getElementById("meLine").textContent = `Logged in as userId=${me.userId}, email=${me.email}`;
+    }
+
+    async function loadRooms() {
+        const r = await api("/api/chats");
+        if (!r) return;
+        renderRooms(r.body);
+        return r.body;
+    }
+
+    async function loadMessages(roomId) {
+        const r = await api(`/api/chats/${roomId}/messages`);
+        if (!r) return;
+        renderMessages(r.body);
+    }
+
+    async function selectRoom(roomId) {
+        const room = roomsState.find(item => item.roomId === roomId);
+        if (!room) {
+            return;
+        }
+        activeRoomId = roomId;
+        roomTitle.textContent = room.friendName;
+        roomMeta.textContent = room.friendEmail;
+        setComposerEnabled(true);
+        await loadRooms();
+        await loadMessages(roomId);
+    }
+
+    async function openRoomIfRequested() {
+        const params = new URLSearchParams(window.location.search);
+        const friendId = Number(params.get("friendId"));
+        if (!Number.isInteger(friendId) || friendId <= 0) {
+            return;
+        }
+        const r = await api(`/api/chats/direct/${friendId}`, {method: "POST"});
+        if (!r) return;
+        print("OPEN CHAT", r);
+        await loadRooms();
+        await selectRoom(r.body.roomId);
+    }
+
+    async function sendMessage() {
+        if (!activeRoomId) {
+            return;
+        }
+        const content = messageInput.value.trim();
+        if (!content) {
+            print("VALIDATION", "메시지를 입력하세요.");
+            return;
+        }
+        try {
+            const r = await api(`/api/chats/${activeRoomId}/messages`, {
+                method: "POST",
+                body: JSON.stringify({content})
+            });
+            if (!r) return;
+            messageInput.value = "";
+            await loadRooms();
+            await loadMessages(activeRoomId);
+        } catch (e) {
+            print("SEND FAILED", e);
+        }
+    }
+
+    async function bootstrap() {
+        try {
+            await loadMe();
+            const rooms = await loadRooms();
+            await openRoomIfRequested();
+
+            if (!activeRoomId && rooms && rooms.length > 0) {
+                await selectRoom(rooms[0].roomId);
+            }
+
+            refreshTimer = setInterval(async () => {
+                try {
+                    await loadRooms();
+                    if (activeRoomId) {
+                        await loadMessages(activeRoomId);
+                    }
+                } catch (e) {
+                    print("AUTO REFRESH FAILED", e);
+                }
+            }, 5000);
+        } catch (e) {
+            print("CHAT INIT FAILED", e);
+        }
+    }
+
+    document.getElementById("sendBtn").onclick = sendMessage;
+    document.getElementById("messageInput").addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            sendMessage();
+        }
+    });
+    document.getElementById("logoutBtn").onclick = async () => {
+        if (refreshTimer) {
+            clearInterval(refreshTimer);
+        }
+        try {
+            await fetch("/api/auth/logout", {method: "POST"});
+        } catch (_) {}
+        window.location.href = "/auth";
+    };
+
+    window.selectRoom = selectRoom;
+
+    bootstrap();
+</script>
+</body>
+</html>
